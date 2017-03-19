@@ -29,7 +29,7 @@
     "example-led": "node -r babel-register examples/led.js"
   },
   "dependencies": {
-    "@pokusew/pcsclite": "^0.4.17"
+    "pcsclite": "git://github.com/philoliver/node-pcsclite.git#master"
   },
   "devDependencies": {
     "babel-cli": "^6.24.0",
