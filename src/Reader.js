@@ -367,7 +367,6 @@ class Reader extends EventEmitter {
 
 			this.logger.info('response received', response);
 
-
 		} catch (err) {
 
 			throw new LoadAuthenticationKeyError(null, null, err);
@@ -545,7 +544,7 @@ class Reader extends EventEmitter {
 			throw new ReadError(OPERATION_FAILED, `Read operation failed: Status code: 0x${statusCode.toString(16)}`);
 		}
 
-		const data = response.slice(0, -2);
+		const data = new Buffer(response.slice(0, -2));
 
 		this.logger.info('data', data);
 
@@ -622,6 +621,7 @@ class Reader extends EventEmitter {
 
 		const statusCode = response.readUInt16BE(0);
 
+		this.logger.info("Recived status code: ", "0x"+statusCode.toString(16));
 		if (statusCode !== 0x9000) {
 			throw new WriteError(OPERATION_FAILED, `Write operation failed: Status code: 0x${statusCode.toString(16)}`);
 		}
