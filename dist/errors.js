@@ -1,30 +1,30 @@
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
-		value: true
+	value: true
 });
 const UNKNOWN_ERROR = exports.UNKNOWN_ERROR = 'unknown_error';
 
 class BaseError extends Error {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(message);
+		super(message);
 
-				Error.captureStackTrace(this, this.constructor);
+		Error.captureStackTrace(this, this.constructor);
 
-				this.name = 'BaseError';
+		this.name = 'BaseError';
 
-				if (!message && previousError) {
-						this.message = previousError.message;
-				}
-
-				this.code = code;
-
-				if (previousError) {
-						this.previous = previousError;
-				}
+		if (!message && previousError) {
+			this.message = previousError.message;
 		}
+
+		this.code = code;
+
+		if (previousError) {
+			this.previous = previousError;
+		}
+	}
 
 }
 
@@ -35,108 +35,108 @@ const OPERATION_FAILED = exports.OPERATION_FAILED = 'operation_failed';
 
 class TransmitError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'TransmitError';
-		}
+		this.name = 'TransmitError';
+	}
 
 }
 
 exports.TransmitError = TransmitError;
 class ControlError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'ControlError';
-		}
+		this.name = 'ControlError';
+	}
 
 }
 
 exports.ControlError = ControlError;
 class ReadError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'ReadError';
-		}
+		this.name = 'ReadError';
+	}
 
 }
 
 exports.ReadError = ReadError;
 class WriteError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'WriteError';
-		}
+		this.name = 'WriteError';
+	}
 
 }
 
 exports.WriteError = WriteError;
 class LoadAuthenticationKeyError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'LoadAuthenticationKeyError';
-		}
+		this.name = 'LoadAuthenticationKeyError';
+	}
 
 }
 
 exports.LoadAuthenticationKeyError = LoadAuthenticationKeyError;
 class AuthenticationError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'AuthenticationError';
-		}
+		this.name = 'AuthenticationError';
+	}
 
 }
 
 exports.AuthenticationError = AuthenticationError;
 class ConnectError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'ConnectError';
-		}
+		this.name = 'ConnectError';
+	}
 
 }
 
 exports.ConnectError = ConnectError;
 class DisconnectError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'DisconnectError';
-		}
+		this.name = 'DisconnectError';
+	}
 
 }
 
 exports.DisconnectError = DisconnectError;
 class GetUIDError extends BaseError {
 
-		constructor(code, message, previousError) {
+	constructor(code, message, previousError) {
 
-				super(code, message, previousError);
+		super(code, message, previousError);
 
-				this.name = 'GetUIDError';
-		}
+		this.name = 'GetUIDError';
+	}
 
 }
 exports.GetUIDError = GetUIDError;

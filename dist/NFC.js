@@ -4,30 +4,6 @@ Object.defineProperty(exports, "__esModule", {
 	value: true
 });
 
-var _Reader = require('./Reader');
-
-Object.keys(_Reader).forEach(function (key) {
-	if (key === "default" || key === "__esModule") return;
-	Object.defineProperty(exports, key, {
-		enumerable: true,
-		get: function () {
-			return _Reader[key];
-		}
-	});
-});
-
-var _errors = require('./errors');
-
-Object.keys(_errors).forEach(function (key) {
-	if (key === "default" || key === "__esModule") return;
-	Object.defineProperty(exports, key, {
-		enumerable: true,
-		get: function () {
-			return _errors[key];
-		}
-	});
-});
-
 var _pcsclite = require('pcsclite');
 
 var _pcsclite2 = _interopRequireDefault(_pcsclite);
@@ -35,6 +11,8 @@ var _pcsclite2 = _interopRequireDefault(_pcsclite);
 var _events = require('events');
 
 var _events2 = _interopRequireDefault(_events);
+
+var _Reader = require('./Reader');
 
 var _Reader2 = _interopRequireDefault(_Reader);
 
