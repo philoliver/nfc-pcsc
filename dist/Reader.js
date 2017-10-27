@@ -7,6 +7,8 @@ exports.CONNECT_MODE_CARD = exports.CONNECT_MODE_DIRECT = exports.KEY_TYPE_B = e
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 var _events = require('events');
 
 var _events2 = _interopRequireDefault(_events);
@@ -15,743 +17,1095 @@ var _errors = require('./errors');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
-const TAG_ISO_14443_3 = exports.TAG_ISO_14443_3 = 'TAG_ISO_14443_3';
-const TAG_ISO_14443_4 = exports.TAG_ISO_14443_4 = 'TAG_ISO_14443_4';
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-const KEY_TYPE_A = exports.KEY_TYPE_A = 0x60;
-const KEY_TYPE_B = exports.KEY_TYPE_B = 0x61;
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-const CONNECT_MODE_DIRECT = exports.CONNECT_MODE_DIRECT = 'CONNECT_MODE_DIRECT';
-const CONNECT_MODE_CARD = exports.CONNECT_MODE_CARD = 'CONNECT_MODE_CARD';
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-class Reader extends _events2.default {
+var TAG_ISO_14443_3 = exports.TAG_ISO_14443_3 = 'TAG_ISO_14443_3';
+var TAG_ISO_14443_4 = exports.TAG_ISO_14443_4 = 'TAG_ISO_14443_4';
 
-	static reverseBuffer(src) {
+var KEY_TYPE_A = exports.KEY_TYPE_A = 0x60;
+var KEY_TYPE_B = exports.KEY_TYPE_B = 0x61;
 
-		const buffer = new Buffer(src.length);
+var CONNECT_MODE_DIRECT = exports.CONNECT_MODE_DIRECT = 'CONNECT_MODE_DIRECT';
+var CONNECT_MODE_CARD = exports.CONNECT_MODE_CARD = 'CONNECT_MODE_CARD';
 
-		for (let i = 0, j = src.length - 1; i <= j; ++i, --j) {
-			buffer[i] = src[j];
-			buffer[j] = src[i];
+var Reader = function (_EventEmitter) {
+	_inherits(Reader, _EventEmitter);
+
+	_createClass(Reader, [{
+		key: 'aid',
+		get: function get() {
+			return this._aid;
+		},
+		set: function set(value) {
+
+			this.logger.info('Setting AID to', value);
+			this._aid = value;
+
+			var parsedAid = Reader.parseAid(value);
+			this.logger.info('AID parsed', parsedAid);
+			this._parsedAid = parsedAid;
 		}
-
-		return buffer;
-	}
-
-	static parseAid(str) {
-
-		const result = [];
-
-		for (let i = 0; i < str.length; i += 2) {
-			result.push(parseInt(str.substr(i, 2), 16));
+	}, {
+		key: 'name',
+		get: function get() {
+			return this.reader.name;
 		}
+	}], [{
+		key: 'reverseBuffer',
+		value: function reverseBuffer(src) {
 
-		return result;
-	}
+			var buffer = new Buffer(src.length);
 
-	static selectStandardByAtr(atr) {
+			for (var i = 0, j = src.length - 1; i <= j; ++i, --j) {
+				buffer[i] = src[j];
+				buffer[j] = src[i];
+			}
 
-		// TODO: better detecting card types
-		if (atr[5] && atr[5] === 0x4f) {
-			return TAG_ISO_14443_3;
-		} else {
-			return TAG_ISO_14443_4;
+			return buffer;
 		}
-	}
+	}, {
+		key: 'parseAid',
+		value: function parseAid(str) {
 
-	get aid() {
-		return this._aid;
-	}
+			var result = [];
 
-	set aid(value) {
+			for (var i = 0; i < str.length; i += 2) {
+				result.push(parseInt(str.substr(i, 2), 16));
+			}
 
-		this.logger.info('Setting AID to', value);
-		this._aid = value;
+			return result;
+		}
+	}, {
+		key: 'selectStandardByAtr',
+		value: function selectStandardByAtr(atr) {
 
-		const parsedAid = Reader.parseAid(value);
-		this.logger.info('AID parsed', parsedAid);
-		this._parsedAid = parsedAid;
-	}
+			// TODO: better detecting card types
+			if (atr[5] && atr[5] === 0x4f) {
+				return TAG_ISO_14443_3;
+			} else {
+				return TAG_ISO_14443_4;
+			}
+		}
+	}]);
 
-	get name() {
-		return this.reader.name;
-	}
+	function Reader(reader, logger) {
+		var _this2 = this;
 
-	constructor(reader, logger) {
-		var _this;
+		_classCallCheck(this, Reader);
 
-		_this = super();
+		var _this = _possibleConstructorReturn(this, (Reader.__proto__ || Object.getPrototypeOf(Reader)).call(this));
 
-		this.reader = null;
-		this.logger = null;
-		this.connection = null;
-		this.card = null;
-		this.autoProcessing = true;
-		this._aid = null;
-		this._parsedAid = null;
-		this.keyStorage = {
+		_this.reader = null;
+		_this.logger = null;
+		_this.connection = null;
+		_this.card = null;
+		_this.autoProcessing = true;
+		_this._aid = null;
+		_this._parsedAid = null;
+		_this.keyStorage = {
 			'0': null,
 			'1': null
 		};
-		this.pendingLoadAuthenticationKey = {};
-		this.reader = reader;
+		_this.pendingLoadAuthenticationKey = {};
+
+
+		_this.reader = reader;
 
 		if (logger) {
-			this.logger = logger;
+			_this.logger = logger;
 		} else {
-			this.logger = {
-				log: function () {},
-				debug: function () {},
-				info: function () {},
-				warn: function () {},
-				error: function () {}
+			_this.logger = {
+				log: function log() {},
+				debug: function debug() {},
+				info: function info() {},
+				warn: function warn() {},
+				error: function error() {}
 			};
 		}
 
-		this.reader.on('error', err => {
+		_this.reader.on('error', function (err) {
 
-			this.logger.error(err);
+			_this.logger.error(err);
 
-			this.emit('error', err);
+			_this.emit('error', err);
 		});
 
-		this.reader.on('status', (() => {
-			var _ref = _asyncToGenerator(function* (status) {
+		_this.reader.on('status', function () {
+			var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(status) {
+				var changes, atr;
+				return regeneratorRuntime.wrap(function _callee$(_context) {
+					while (1) {
+						switch (_context.prev = _context.next) {
+							case 0:
 
-				_this.logger.debug('status', status);
+								_this.logger.debug('status', status);
 
-				// check what has changed
-				const changes = _this.reader.state ^ status.state;
+								// check what has changed
+								changes = _this.reader.state ^ status.state;
 
-				_this.logger.debug('changes', changes);
 
-				if (changes) {
+								_this.logger.debug('changes', changes);
 
-					if (changes & _this.reader.SCARD_STATE_EMPTY && status.state & _this.reader.SCARD_STATE_EMPTY) {
+								if (!changes) {
+									_context.next = 36;
+									break;
+								}
 
-						_this.logger.info('card removed');
+								if (!(changes & _this.reader.SCARD_STATE_EMPTY && status.state & _this.reader.SCARD_STATE_EMPTY)) {
+									_context.next = 19;
+									break;
+								}
 
-						if (_this.card) {
-							_this.emit('card.off', _extends({}, _this.card));
-						}
+								_this.logger.info('card removed');
 
-						try {
+								if (_this.card) {
+									_this.emit('card.off', _extends({}, _this.card));
+								}
 
-							_this.card = null;
-							if (_this.connection) {
-								yield _this.disconnect();
-							}
-						} catch (err) {
+								_context.prev = 7;
 
-							_this.emit(err);
-						}
-					} else if (changes & _this.reader.SCARD_STATE_PRESENT && status.state & _this.reader.SCARD_STATE_PRESENT) {
 
-						const atr = status.atr;
+								_this.card = null;
 
-						_this.logger.info('card inserted', atr);
+								if (!_this.connection) {
+									_context.next = 12;
+									break;
+								}
 
-						_this.card = {};
+								_context.next = 12;
+								return _this.disconnect();
 
-						if (atr) {
-							_this.card.atr = atr;
-							_this.card.standard = Reader.selectStandardByAtr(atr);
-							_this.card.type = _this.card.standard;
-						}
+							case 12:
+								_context.next = 17;
+								break;
 
-						try {
+							case 14:
+								_context.prev = 14;
+								_context.t0 = _context['catch'](7);
 
-							yield _this.connect();
 
-							if (!_this.autoProcessing) {
+								_this.emit(_context.t0);
+
+							case 17:
+								_context.next = 36;
+								break;
+
+							case 19:
+								if (!(changes & _this.reader.SCARD_STATE_PRESENT && status.state & _this.reader.SCARD_STATE_PRESENT)) {
+									_context.next = 36;
+									break;
+								}
+
+								atr = status.atr;
+
+
+								_this.logger.info('card inserted', atr);
+
+								_this.card = {};
+
+								if (atr) {
+									_this.card.atr = atr;
+									_this.card.standard = Reader.selectStandardByAtr(atr);
+									_this.card.type = _this.card.standard;
+								}
+
+								_context.prev = 24;
+								_context.next = 27;
+								return _this.connect();
+
+							case 27:
+								if (_this.autoProcessing) {
+									_context.next = 30;
+									break;
+								}
+
 								_this.emit('card', _this.card);
-								return;
-							}
+								return _context.abrupt('return');
 
-							_this.handleTag();
-						} catch (err) {
+							case 30:
 
-							_this.emit(err);
+								_this.handleTag();
+
+								_context.next = 36;
+								break;
+
+							case 33:
+								_context.prev = 33;
+								_context.t1 = _context['catch'](24);
+
+
+								_this.emit(_context.t1);
+
+							case 36:
+							case 'end':
+								return _context.stop();
 						}
 					}
-				}
-			});
+				}, _callee, _this2, [[7, 14], [24, 33]]);
+			}));
 
 			return function (_x) {
 				return _ref.apply(this, arguments);
 			};
-		})());
+		}());
 
-		this.reader.on('end', () => {
+		_this.reader.on('end', function () {
 
-			this.logger.info('reader removed');
+			_this.logger.info('reader removed');
 
-			this.emit('end');
+			_this.emit('end');
 		});
+
+		return _this;
 	}
 
-	connect(mode = CONNECT_MODE_CARD) {
+	_createClass(Reader, [{
+		key: 'connect',
+		value: function connect() {
+			var _modes,
+			    _this3 = this;
 
-		const modes = {
-			[CONNECT_MODE_DIRECT]: this.reader.SCARD_SHARE_DIRECT,
-			[CONNECT_MODE_CARD]: this.reader.SCARD_SHARE_SHARED
-		};
+			var mode = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : CONNECT_MODE_CARD;
 
-		if (!modes[mode]) {
-			throw new _errors.ConnectError('invalid_mode', 'Invalid mode');
-		}
 
-		this.logger.info('trying to connect', mode, modes[mode]);
+			var modes = (_modes = {}, _defineProperty(_modes, CONNECT_MODE_DIRECT, this.reader.SCARD_SHARE_DIRECT), _defineProperty(_modes, CONNECT_MODE_CARD, this.reader.SCARD_SHARE_SHARED), _modes);
 
-		return new Promise((resolve, reject) => {
-
-			// connect card
-			this.reader.connect({
-				share_mode: modes[mode]
-				//protocol: this.reader.SCARD_PROTOCOL_UNDEFINED
-			}, (err, protocol) => {
-
-				if (err) {
-					const error = new _errors.ConnectError(_errors.FAILURE, 'An error occurred while connecting.', err);
-					this.logger.error(error);
-					return reject(error);
-				}
-
-				this.connection = {
-					type: modes[mode],
-					protocol: protocol
-				};
-
-				this.logger.info('connected', this.connection);
-
-				return resolve(this.connection);
-			});
-		});
-	}
-
-	disconnect() {
-
-		if (!this.connection) {
-			throw new _errors.DisconnectError('not_connected', 'Reader in not connected. No need for disconnecting.');
-		}
-
-		this.logger.info('trying to disconnect', this.connection);
-
-		return new Promise((resolve, reject) => {
-
-			// disconnect removed
-			this.reader.disconnect(this.reader.SCARD_LEAVE_CARD, err => {
-
-				if (err) {
-					const error = new _errors.DisconnectError(_errors.FAILURE, 'An error occurred while disconnecting.', err);
-					this.logger.error(error);
-					return reject(error);
-				}
-
-				this.connection = null;
-
-				this.logger.info('disconnected');
-
-				return resolve(true);
-			});
-		});
-	}
-
-	transmit(data, responseMaxLength) {
-
-		if (!this.card || !this.connection) {
-			throw new _errors.TransmitError(_errors.CARD_NOT_CONNECTED, 'No card or connection available.');
-		}
-
-		return new Promise((resolve, reject) => {
-
-			this.logger.log('transmitting', data, responseMaxLength);
-
-			this.reader.transmit(data, responseMaxLength, this.connection.protocol, (err, response) => {
-
-				if (err) {
-					const error = new _errors.TransmitError(_errors.FAILURE, 'An error occurred while transmitting.', err);
-					return reject(error);
-				}
-
-				return resolve(response);
-			});
-		});
-	}
-
-	control(data, responseMaxLength) {
-
-		if (!this.connection) {
-			throw new _errors.ControlError('not_connected', 'No connection available.');
-		}
-
-		return new Promise((resolve, reject) => {
-
-			this.logger.log('transmitting control', data, responseMaxLength);
-
-			this.reader.control(data, this.reader.IOCTL_CCID_ESCAPE, responseMaxLength, (err, response) => {
-
-				if (err) {
-					const error = new _errors.ControlError(_errors.FAILURE, 'An error occurred while transmitting control.', err);
-					return reject(error);
-				}
-
-				return resolve(response);
-			});
-		});
-	}
-
-	loadAuthenticationKey(keyNumber, key) {
-		var _this2 = this;
-
-		return _asyncToGenerator(function* () {
-
-			if (!(keyNumber === 0 || keyNumber === 1)) {
-				throw new _errors.LoadAuthenticationKeyError('invalid_key_number');
+			if (!modes[mode]) {
+				throw new _errors.ConnectError('invalid_mode', 'Invalid mode');
 			}
 
-			const keyData = Reader.parseAid(key);
+			this.logger.info('trying to connect', mode, modes[mode]);
 
-			if (keyData.length !== 6) {
-				throw new _errors.LoadAuthenticationKeyError('invalid_key');
-			}
+			return new Promise(function (resolve, reject) {
 
-			// CMD: Load Authentication Keys
-			const packet = new Buffer([0xff, // Class
-			0x82, // INS
-			0x00, // P1: Key Structure (0x00 = Key is loaded into the reader volatile memory.)
-			keyNumber, // P2: Key Number (00h ~ 01h = Key Location. The keys will disappear once the reader is disconnected from the PC)
-			0x06, // Lc
-			// Data In: Key (6 bytes)
-			...keyData]);
+				// connect card
+				_this3.reader.connect({
+					share_mode: modes[mode]
+					//protocol: this.reader.SCARD_PROTOCOL_UNDEFINED
+				}, function (err, protocol) {
 
-			let response = null;
-
-			try {
-
-				response = yield _this2.transmit(packet, 2);
-
-				_this2.logger.info('response received', response);
-			} catch (err) {
-
-				throw new _errors.LoadAuthenticationKeyError(null, null, err);
-			}
-
-			const statusCode = response.readUInt16BE(0);
-
-			if (statusCode !== 0x9000) {
-				throw new _errors.LoadAuthenticationKeyError(_errors.OPERATION_FAILED, `Load authentication key operation failed: Status code: ${statusCode}`);
-			}
-
-			_this2.keyStorage[keyNumber] = key;
-
-			return keyNumber;
-		})();
-	}
-
-	// for PC/SC V2.01 use obsolete = true
-	// for PC/SC V2.07 use obsolete = false [default]
-	authenticate(blockNumber, keyType, key, obsolete = false) {
-		var _this3 = this;
-
-		return _asyncToGenerator(function* () {
-
-			let keyNumber = Object.keys(_this3.keyStorage).find(function (n) {
-				return _this3.keyStorage[n] === key;
-			});
-
-			// key is not in the storage
-			if (!keyNumber) {
-
-				// is not being written now?
-				if (_this3.pendingLoadAuthenticationKey[key]) {
-					try {
-						keyNumber = yield _this3.pendingLoadAuthenticationKey[key];
-					} catch (err) {
-						throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', err);
+					if (err) {
+						var error = new _errors.ConnectError(_errors.FAILURE, 'An error occurred while connecting.', err);
+						_this3.logger.error(error);
+						return reject(error);
 					}
-				} else {
 
-					// set key number to first
-					keyNumber = Object.keys(_this3.keyStorage)[0];
+					_this3.connection = {
+						type: modes[mode],
+						protocol: protocol
+					};
 
-					// if this number is not free
-					if (_this3.keyStorage[keyNumber] !== null) {
-						// try to find any free number
-						const freeNumber = Object.keys(_this3.keyStorage).find(function (n) {
-							return _this3.keyStorage[n] === null;
-						});
-						// if we find, we use it, otherwise the first will be used and rewritten
-						if (freeNumber) {
-							keyNumber = freeNumber;
+					_this3.logger.info('connected', _this3.connection);
+
+					return resolve(_this3.connection);
+				});
+			});
+		}
+	}, {
+		key: 'disconnect',
+		value: function disconnect() {
+			var _this4 = this;
+
+			if (!this.connection) {
+				throw new _errors.DisconnectError('not_connected', 'Reader in not connected. No need for disconnecting.');
+			}
+
+			this.logger.info('trying to disconnect', this.connection);
+
+			return new Promise(function (resolve, reject) {
+
+				// disconnect removed
+				_this4.reader.disconnect(_this4.reader.SCARD_LEAVE_CARD, function (err) {
+
+					if (err) {
+						var error = new _errors.DisconnectError(_errors.FAILURE, 'An error occurred while disconnecting.', err);
+						_this4.logger.error(error);
+						return reject(error);
+					}
+
+					_this4.connection = null;
+
+					_this4.logger.info('disconnected');
+
+					return resolve(true);
+				});
+			});
+		}
+	}, {
+		key: 'transmit',
+		value: function transmit(data, responseMaxLength) {
+			var _this5 = this;
+
+			if (!this.card || !this.connection) {
+				throw new _errors.TransmitError(_errors.CARD_NOT_CONNECTED, 'No card or connection available.');
+			}
+
+			return new Promise(function (resolve, reject) {
+
+				_this5.logger.log('transmitting', data, responseMaxLength);
+
+				_this5.reader.transmit(data, responseMaxLength, _this5.connection.protocol, function (err, response) {
+
+					if (err) {
+						var error = new _errors.TransmitError(_errors.FAILURE, 'An error occurred while transmitting.', err);
+						return reject(error);
+					}
+
+					return resolve(response);
+				});
+			});
+		}
+	}, {
+		key: 'control',
+		value: function control(data, responseMaxLength) {
+			var _this6 = this;
+
+			if (!this.connection) {
+				throw new _errors.ControlError('not_connected', 'No connection available.');
+			}
+
+			return new Promise(function (resolve, reject) {
+
+				_this6.logger.log('transmitting control', data, responseMaxLength);
+
+				_this6.reader.control(data, _this6.reader.IOCTL_CCID_ESCAPE, responseMaxLength, function (err, response) {
+
+					if (err) {
+						var error = new _errors.ControlError(_errors.FAILURE, 'An error occurred while transmitting control.', err);
+						return reject(error);
+					}
+
+					return resolve(response);
+				});
+			});
+		}
+	}, {
+		key: 'loadAuthenticationKey',
+		value: function () {
+			var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(keyNumber, key) {
+				var keyData, packet, response, statusCode;
+				return regeneratorRuntime.wrap(function _callee2$(_context2) {
+					while (1) {
+						switch (_context2.prev = _context2.next) {
+							case 0:
+								if (keyNumber === 0 || keyNumber === 1) {
+									_context2.next = 2;
+									break;
+								}
+
+								throw new _errors.LoadAuthenticationKeyError('invalid_key_number');
+
+							case 2:
+								keyData = Reader.parseAid(key);
+
+								if (!(keyData.length !== 6)) {
+									_context2.next = 5;
+									break;
+								}
+
+								throw new _errors.LoadAuthenticationKeyError('invalid_key');
+
+							case 5:
+
+								// CMD: Load Authentication Keys
+								packet = new Buffer([0xff, // Class
+								0x82, // INS
+								0x00, // P1: Key Structure (0x00 = Key is loaded into the reader volatile memory.)
+								keyNumber, // P2: Key Number (00h ~ 01h = Key Location. The keys will disappear once the reader is disconnected from the PC)
+								0x06].concat(_toConsumableArray(keyData)));
+								response = null;
+								_context2.prev = 7;
+								_context2.next = 10;
+								return this.transmit(packet, 2);
+
+							case 10:
+								response = _context2.sent;
+
+
+								this.logger.info('response received', response);
+
+								_context2.next = 17;
+								break;
+
+							case 14:
+								_context2.prev = 14;
+								_context2.t0 = _context2['catch'](7);
+								throw new _errors.LoadAuthenticationKeyError(null, null, _context2.t0);
+
+							case 17:
+								statusCode = response.readUInt16BE(0);
+
+								if (!(statusCode !== 0x9000)) {
+									_context2.next = 20;
+									break;
+								}
+
+								throw new _errors.LoadAuthenticationKeyError(_errors.OPERATION_FAILED, 'Load authentication key operation failed: Status code: ' + statusCode);
+
+							case 20:
+
+								this.keyStorage[keyNumber] = key;
+
+								return _context2.abrupt('return', keyNumber);
+
+							case 22:
+							case 'end':
+								return _context2.stop();
 						}
 					}
+				}, _callee2, this, [[7, 14]]);
+			}));
 
-					try {
-						_this3.pendingLoadAuthenticationKey[key] = _this3.loadAuthenticationKey(parseInt(keyNumber), key);
-						yield _this3.pendingLoadAuthenticationKey[key];
-					} catch (err) {
-						throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', err);
+			function loadAuthenticationKey(_x3, _x4) {
+				return _ref2.apply(this, arguments);
+			}
+
+			return loadAuthenticationKey;
+		}()
+
+		// for PC/SC V2.01 use obsolete = true
+		// for PC/SC V2.07 use obsolete = false [default]
+
+	}, {
+		key: 'authenticate',
+		value: function () {
+			var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(blockNumber, keyType, key) {
+				var _this7 = this;
+
+				var obsolete = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+				var keyNumber, freeNumber, packet, response, statusCode;
+				return regeneratorRuntime.wrap(function _callee3$(_context3) {
+					while (1) {
+						switch (_context3.prev = _context3.next) {
+							case 0:
+								keyNumber = Object.keys(this.keyStorage).find(function (n) {
+									return _this7.keyStorage[n] === key;
+								});
+
+								// key is not in the storage
+
+								if (keyNumber) {
+									_context3.next = 25;
+									break;
+								}
+
+								if (!this.pendingLoadAuthenticationKey[key]) {
+									_context3.next = 14;
+									break;
+								}
+
+								_context3.prev = 3;
+								_context3.next = 6;
+								return this.pendingLoadAuthenticationKey[key];
+
+							case 6:
+								keyNumber = _context3.sent;
+								_context3.next = 12;
+								break;
+
+							case 9:
+								_context3.prev = 9;
+								_context3.t0 = _context3['catch'](3);
+								throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', _context3.t0);
+
+							case 12:
+								_context3.next = 25;
+								break;
+
+							case 14:
+
+								// set key number to first
+								keyNumber = Object.keys(this.keyStorage)[0];
+
+								// if this number is not free
+								if (this.keyStorage[keyNumber] !== null) {
+									// try to find any free number
+									freeNumber = Object.keys(this.keyStorage).find(function (n) {
+										return _this7.keyStorage[n] === null;
+									});
+									// if we find, we use it, otherwise the first will be used and rewritten
+
+									if (freeNumber) {
+										keyNumber = freeNumber;
+									}
+								}
+
+								_context3.prev = 16;
+
+								this.pendingLoadAuthenticationKey[key] = this.loadAuthenticationKey(parseInt(keyNumber), key);
+								_context3.next = 20;
+								return this.pendingLoadAuthenticationKey[key];
+
+							case 20:
+								_context3.next = 25;
+								break;
+
+							case 22:
+								_context3.prev = 22;
+								_context3.t1 = _context3['catch'](16);
+								throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', _context3.t1);
+
+							case 25:
+								packet = !obsolete ?
+								// CMD: Authentication
+								new Buffer([0xff, // Class
+								0x86, // INS
+								0x00, // P1
+								0x00, // P2
+								0x05, // Lc
+								// Data In: Authenticate Data Bytes (5 bytes)
+								0x01, // Byte 1: Version
+								0x00, // Byte 2
+								blockNumber, // Byte 3: Block Number
+								keyType, // Byte 4: Key Type
+								keyNumber]) :
+								// CMD: Authentication (obsolete)
+								new Buffer([0xff, // Class
+								0x88, // INS
+								0x00, // P1
+								blockNumber, // P2: Block Number
+								keyType, // P3: Key Type
+								keyNumber // Data In: Key Number
+								]);
+								response = null;
+								_context3.prev = 27;
+								_context3.next = 30;
+								return this.transmit(packet, 2);
+
+							case 30:
+								response = _context3.sent;
+
+
+								this.logger.info('response received', response);
+
+								_context3.next = 37;
+								break;
+
+							case 34:
+								_context3.prev = 34;
+								_context3.t2 = _context3['catch'](27);
+								throw new _errors.AuthenticationError(null, null, _context3.t2);
+
+							case 37:
+								statusCode = response.readUInt16BE(0);
+
+								if (!(statusCode !== 0x9000)) {
+									_context3.next = 41;
+									break;
+								}
+
+								this.logger.error('[authentication operation failed][request packet]', packet);
+								throw new _errors.AuthenticationError(_errors.OPERATION_FAILED, 'Authentication operation failed: Status code: 0x' + statusCode.toString(16));
+
+							case 41:
+								return _context3.abrupt('return', true);
+
+							case 42:
+							case 'end':
+								return _context3.stop();
+						}
 					}
-				}
+				}, _callee3, this, [[3, 9], [16, 22], [27, 34]]);
+			}));
+
+			function authenticate(_x5, _x6, _x7) {
+				return _ref3.apply(this, arguments);
 			}
 
-			const packet = !obsolete ?
-			// CMD: Authentication
-			new Buffer([0xff, // Class
-			0x86, // INS
-			0x00, // P1
-			0x00, // P2
-			0x05, // Lc
-			// Data In: Authenticate Data Bytes (5 bytes)
-			0x01, // Byte 1: Version
-			0x00, // Byte 2
-			blockNumber, // Byte 3: Block Number
-			keyType, // Byte 4: Key Type
-			keyNumber]) :
-			// CMD: Authentication (obsolete)
-			new Buffer([0xff, // Class
-			0x88, // INS
-			0x00, // P1
-			blockNumber, // P2: Block Number
-			keyType, // P3: Key Type
-			keyNumber // Data In: Key Number
-			]);
+			return authenticate;
+		}()
+	}, {
+		key: 'read',
+		value: function () {
+			var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee4(blockNumber, length) {
+				var blockSize = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 4;
+				var packetSize = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 16;
+				var p, commands, i, block, size, packet, response, statusCode, data;
+				return regeneratorRuntime.wrap(function _callee4$(_context4) {
+					while (1) {
+						switch (_context4.prev = _context4.next) {
+							case 0:
+								if (this.card) {
+									_context4.next = 2;
+									break;
+								}
 
-			let response = null;
+								throw new _errors.ReadError(_errors.CARD_NOT_CONNECTED);
 
-			try {
+							case 2:
 
-				response = yield _this3.transmit(packet, 2);
+								this.logger.info('reading data from card', this.card);
 
-				_this3.logger.info('response received', response);
-			} catch (err) {
+								if (!(length > packetSize)) {
+									_context4.next = 8;
+									break;
+								}
 
-				throw new _errors.AuthenticationError(null, null, err);
+								p = Math.ceil(length / packetSize);
+								commands = [];
+
+
+								for (i = 0; i < p; i++) {
+									block = blockNumber + i * packetSize / blockSize;
+									size = (i + 1) * packetSize < length ? packetSize : length - i * packetSize;
+
+									// console.log(i, block, size);
+
+									commands.push(this.read(block, size, blockSize, packetSize));
+								}
+
+								return _context4.abrupt('return', Promise.all(commands).then(function (values) {
+									// console.log(values);
+									return Buffer.concat(values, length);
+								}));
+
+							case 8:
+
+								// APDU CMD: Read Binary Blocks
+								packet = new Buffer([0xff, // Class
+								0xb0, // Ins
+								0x00, // P1
+								blockNumber, // P2: Block Number
+								length // Le: Number of Bytes to Read (Maximum 16 bytes)
+								]);
+								response = null;
+								_context4.prev = 10;
+								_context4.next = 13;
+								return this.transmit(packet, length + 2);
+
+							case 13:
+								response = _context4.sent;
+
+
+								this.logger.info('response received', response);
+
+								_context4.next = 20;
+								break;
+
+							case 17:
+								_context4.prev = 17;
+								_context4.t0 = _context4['catch'](10);
+								throw new _errors.ReadError(null, null, _context4.t0);
+
+							case 20:
+								statusCode = response.slice(-2).readUInt16BE(0);
+
+								if (!(statusCode !== 0x9000)) {
+									_context4.next = 23;
+									break;
+								}
+
+								throw new _errors.ReadError(_errors.OPERATION_FAILED, 'Read operation failed: Status code: 0x' + statusCode.toString(16));
+
+							case 23:
+								data = new Buffer(response.slice(0, -2));
+
+
+								this.logger.info('data', data);
+
+								return _context4.abrupt('return', data);
+
+							case 26:
+							case 'end':
+								return _context4.stop();
+						}
+					}
+				}, _callee4, this, [[10, 17]]);
+			}));
+
+			function read(_x9, _x10) {
+				return _ref4.apply(this, arguments);
 			}
 
-			const statusCode = response.readUInt16BE(0);
+			return read;
+		}()
+	}, {
+		key: 'write',
+		value: function () {
+			var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(blockNumber, data) {
+				var blockSize = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 4;
+				var p, commands, i, block, start, end, part, packetHeader, packet, response, statusCode;
+				return regeneratorRuntime.wrap(function _callee5$(_context5) {
+					while (1) {
+						switch (_context5.prev = _context5.next) {
+							case 0:
+								if (this.card) {
+									_context5.next = 2;
+									break;
+								}
 
-			if (statusCode !== 0x9000) {
-				_this3.logger.error('[authentication operation failed][request packet]', packet);
-				throw new _errors.AuthenticationError(_errors.OPERATION_FAILED, `Authentication operation failed: Status code: 0x${statusCode.toString(16)}`);
+								throw new _errors.WriteError(_errors.CARD_NOT_CONNECTED);
+
+							case 2:
+
+								this.logger.info('writing data to card', this.card);
+
+								if (!(data.length < blockSize || data.length % blockSize !== 0)) {
+									_context5.next = 5;
+									break;
+								}
+
+								throw new _errors.WriteError('invalid_data_length', 'Invalid data length. You can only update the entire data block(s).');
+
+							case 5:
+								if (!(data.length > blockSize)) {
+									_context5.next = 10;
+									break;
+								}
+
+								p = data.length / blockSize;
+								commands = [];
+
+
+								for (i = 0; i < p; i++) {
+									block = blockNumber + i;
+									start = i * blockSize;
+									end = (i + 1) * blockSize;
+									part = data.slice(start, end);
+
+									// console.log(i, block, start, end, part);
+
+									commands.push(this.write(block, part, blockSize));
+								}
+
+								return _context5.abrupt('return', Promise.all(commands).then(function (values) {
+									// console.log(values);
+									return values;
+								}));
+
+							case 10:
+
+								// APDU CMD: Update Binary Block
+								packetHeader = new Buffer([0xff, // Class
+								0xd6, // Ins
+								0x00, // P1
+								blockNumber, // P2: Block Number
+								blockSize]);
+								packet = Buffer.concat([packetHeader, data]);
+								response = null;
+								_context5.prev = 13;
+								_context5.next = 16;
+								return this.transmit(packet, 2);
+
+							case 16:
+								response = _context5.sent;
+
+
+								this.logger.info('response received', response);
+
+								_context5.next = 23;
+								break;
+
+							case 20:
+								_context5.prev = 20;
+								_context5.t0 = _context5['catch'](13);
+								throw new _errors.WriteError(null, null, _context5.t0);
+
+							case 23:
+								statusCode = response.readUInt16BE(0);
+
+
+								this.logger.info("Recived status code: ", "0x" + statusCode.toString(16));
+
+								if (!(statusCode !== 0x9000)) {
+									_context5.next = 27;
+									break;
+								}
+
+								throw new _errors.WriteError(_errors.OPERATION_FAILED, 'Write operation failed: Status code: 0x' + statusCode.toString(16));
+
+							case 27:
+								return _context5.abrupt('return', true);
+
+							case 28:
+							case 'end':
+								return _context5.stop();
+						}
+					}
+				}, _callee5, this, [[13, 20]]);
+			}));
+
+			function write(_x13, _x14) {
+				return _ref5.apply(this, arguments);
 			}
 
-			return true;
-		})();
-	}
+			return write;
+		}()
+	}, {
+		key: 'handleTag',
+		value: function handleTag() {
 
-	read(blockNumber, length, blockSize = 4, packetSize = 16) {
-		var _this4 = this;
-
-		return _asyncToGenerator(function* () {
-
-			if (!_this4.card) {
-				throw new _errors.ReadError(_errors.CARD_NOT_CONNECTED);
-			}
-
-			_this4.logger.info('reading data from card', _this4.card);
-
-			if (length > packetSize) {
-
-				const p = Math.ceil(length / packetSize);
-
-				const commands = [];
-
-				for (let i = 0; i < p; i++) {
-
-					const block = blockNumber + i * packetSize / blockSize;
-
-					const size = (i + 1) * packetSize < length ? packetSize : length - i * packetSize;
-
-					// console.log(i, block, size);
-
-					commands.push(_this4.read(block, size, blockSize, packetSize));
-				}
-
-				return Promise.all(commands).then(function (values) {
-					// console.log(values);
-					return Buffer.concat(values, length);
-				});
-			}
-
-			// APDU CMD: Read Binary Blocks
-			const packet = new Buffer([0xff, // Class
-			0xb0, // Ins
-			0x00, // P1
-			blockNumber, // P2: Block Number
-			length // Le: Number of Bytes to Read (Maximum 16 bytes)
-			]);
-
-			let response = null;
-
-			try {
-
-				response = yield _this4.transmit(packet, length + 2);
-
-				_this4.logger.info('response received', response);
-			} catch (err) {
-
-				throw new _errors.ReadError(null, null, err);
-			}
-
-			const statusCode = response.slice(-2).readUInt16BE(0);
-
-			if (statusCode !== 0x9000) {
-				throw new _errors.ReadError(_errors.OPERATION_FAILED, `Read operation failed: Status code: 0x${statusCode.toString(16)}`);
-			}
-
-			const data = new Buffer(response.slice(0, -2));
-
-			_this4.logger.info('data', data);
-
-			return data;
-		})();
-	}
-
-	write(blockNumber, data, blockSize = 4) {
-		var _this5 = this;
-
-		return _asyncToGenerator(function* () {
-
-			if (!_this5.card) {
-				throw new _errors.WriteError(_errors.CARD_NOT_CONNECTED);
-			}
-
-			_this5.logger.info('writing data to card', _this5.card);
-
-			if (data.length < blockSize || data.length % blockSize !== 0) {
-				throw new _errors.WriteError('invalid_data_length', 'Invalid data length. You can only update the entire data block(s).');
-			}
-
-			if (data.length > blockSize) {
-
-				const p = data.length / blockSize;
-
-				const commands = [];
-
-				for (let i = 0; i < p; i++) {
-
-					const block = blockNumber + i;
-
-					const start = i * blockSize;
-					const end = (i + 1) * blockSize;
-
-					const part = data.slice(start, end);
-
-					// console.log(i, block, start, end, part);
-
-					commands.push(_this5.write(block, part, blockSize));
-				}
-
-				return Promise.all(commands).then(function (values) {
-					// console.log(values);
-					return values;
-				});
-			}
-
-			// APDU CMD: Update Binary Block
-			const packetHeader = new Buffer([0xff, // Class
-			0xd6, // Ins
-			0x00, // P1
-			blockNumber, // P2: Block Number
-			blockSize]);
-
-			const packet = Buffer.concat([packetHeader, data]);
-
-			let response = null;
-
-			try {
-
-				response = yield _this5.transmit(packet, 2);
-
-				_this5.logger.info('response received', response);
-			} catch (err) {
-
-				throw new _errors.WriteError(null, null, err);
-			}
-
-			const statusCode = response.readUInt16BE(0);
-
-			_this5.logger.info("Recived status code: ", "0x" + statusCode.toString(16));
-			if (statusCode !== 0x9000) {
-				throw new _errors.WriteError(_errors.OPERATION_FAILED, `Write operation failed: Status code: 0x${statusCode.toString(16)}`);
-			}
-
-			return true;
-		})();
-	}
-
-	handleTag() {
-
-		if (!this.card) {
-			return false;
-		}
-
-		this.logger.info('handling tag', this.card);
-
-		switch (this.card.standard) {
-
-			case TAG_ISO_14443_3:
-				return this.handle_Iso_14443_3_Tag();
-
-			case TAG_ISO_14443_4:
-				return this.handle_Iso_14443_4_Tag();
-
-			default:
-				return this.handle_Iso_14443_3_Tag();
-
-		}
-	}
-
-	// TODO: improve error handling and debugging
-	handle_Iso_14443_3_Tag() {
-		var _this6 = this;
-
-		return _asyncToGenerator(function* () {
-
-			if (!_this6.card || !_this6.connection) {
+			if (!this.card) {
 				return false;
 			}
 
-			_this6.logger.info('processing ISO 14443-3 tag', _this6.card);
+			this.logger.info('handling tag', this.card);
 
-			// APDU CMD: Get Data
-			const packet = new Buffer([0xff, // Class
-			0xca, // INS
-			0x00, // P1: Get current card UID
-			0x00, // P2
-			0x00 // Le: Full Length of UID
-			]);
+			switch (this.card.standard) {
 
-			try {
+				case TAG_ISO_14443_3:
+					return this.handle_Iso_14443_3_Tag();
 
-				const response = yield _this6.transmit(packet, 12);
+				case TAG_ISO_14443_4:
+					return this.handle_Iso_14443_4_Tag();
 
-				if (response.length < 2) {
+				default:
+					return this.handle_Iso_14443_3_Tag();
 
-					const error = new _errors.GetUIDError('invalid_response', `Invalid response length ${response.length}. Expected minimal length was 2 bytes.`);
-					_this6.emit('error', error);
-
-					return;
-				}
-
-				// last 2 bytes are the status code
-				const statusCode = response.slice(-2).readUInt16BE(0);
-
-				// an error occurred
-				if (statusCode !== 0x9000) {
-
-					const error = new _errors.GetUIDError(_errors.OPERATION_FAILED, 'Could not get card UID.');
-					_this6.emit('error', error);
-
-					return;
-				}
-
-				// strip out the status code (the rest is UID)
-				const uid = response.slice(0, -2).toString('hex');
-				// const uidReverse = Reader.reverseBuffer(response.slice(0, -2)).toString('hex');
-
-				_this6.card.uid = uid;
-
-				_this6.emit('card', _extends({}, _this6.card));
-			} catch (err) {
-
-				const error = new _errors.GetUIDError(null, null, err);
-
-				_this6.emit('error', error);
 			}
-		})();
-	}
+		}
 
-	// TODO: improve error handling and debugging
-	handle_Iso_14443_4_Tag() {
-		var _this7 = this;
+		// TODO: improve error handling and debugging
 
-		return _asyncToGenerator(function* () {
+	}, {
+		key: 'handle_Iso_14443_3_Tag',
+		value: function () {
+			var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee6() {
+				var packet, response, error, statusCode, _error, uid, _error2;
 
-			if (!_this7.card || !_this7.connection) {
-				return false;
+				return regeneratorRuntime.wrap(function _callee6$(_context6) {
+					while (1) {
+						switch (_context6.prev = _context6.next) {
+							case 0:
+								if (!(!this.card || !this.connection)) {
+									_context6.next = 2;
+									break;
+								}
+
+								return _context6.abrupt('return', false);
+
+							case 2:
+
+								this.logger.info('processing ISO 14443-3 tag', this.card);
+
+								// APDU CMD: Get Data
+								packet = new Buffer([0xff, // Class
+								0xca, // INS
+								0x00, // P1: Get current card UID
+								0x00, // P2
+								0x00 // Le: Full Length of UID
+								]);
+								_context6.prev = 4;
+								_context6.next = 7;
+								return this.transmit(packet, 12);
+
+							case 7:
+								response = _context6.sent;
+
+								if (!(response.length < 2)) {
+									_context6.next = 12;
+									break;
+								}
+
+								error = new _errors.GetUIDError('invalid_response', 'Invalid response length ' + response.length + '. Expected minimal length was 2 bytes.');
+
+								this.emit('error', error);
+
+								return _context6.abrupt('return');
+
+							case 12:
+
+								// last 2 bytes are the status code
+								statusCode = response.slice(-2).readUInt16BE(0);
+
+								// an error occurred
+
+								if (!(statusCode !== 0x9000)) {
+									_context6.next = 17;
+									break;
+								}
+
+								_error = new _errors.GetUIDError(_errors.OPERATION_FAILED, 'Could not get card UID.');
+
+								this.emit('error', _error);
+
+								return _context6.abrupt('return');
+
+							case 17:
+
+								// strip out the status code (the rest is UID)
+								uid = response.slice(0, -2).toString('hex');
+								// const uidReverse = Reader.reverseBuffer(response.slice(0, -2)).toString('hex');
+
+								this.card.uid = uid;
+
+								this.emit('card', _extends({}, this.card));
+
+								_context6.next = 26;
+								break;
+
+							case 22:
+								_context6.prev = 22;
+								_context6.t0 = _context6['catch'](4);
+								_error2 = new _errors.GetUIDError(null, null, _context6.t0);
+
+
+								this.emit('error', _error2);
+
+							case 26:
+							case 'end':
+								return _context6.stop();
+						}
+					}
+				}, _callee6, this, [[4, 22]]);
+			}));
+
+			function handle_Iso_14443_3_Tag() {
+				return _ref6.apply(this, arguments);
 			}
 
-			_this7.logger.info('processing ISO 14443-4 tag', _this7.card);
+			return handle_Iso_14443_3_Tag;
+		}()
 
-			if (!_this7._parsedAid) {
+		// TODO: improve error handling and debugging
 
-				const err = new Error('Cannot process ISO 14443-4 tag because AID was not set.');
-				_this7.emit('error', err);
+	}, {
+		key: 'handle_Iso_14443_4_Tag',
+		value: function () {
+			var _ref7 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee7() {
+				var err, packetHeader, aid, packet, response, _err, _err2, statusCode, _err3, data, error;
 
-				return;
+				return regeneratorRuntime.wrap(function _callee7$(_context7) {
+					while (1) {
+						switch (_context7.prev = _context7.next) {
+							case 0:
+								if (!(!this.card || !this.connection)) {
+									_context7.next = 2;
+									break;
+								}
+
+								return _context7.abrupt('return', false);
+
+							case 2:
+
+								this.logger.info('processing ISO 14443-4 tag', this.card);
+
+								if (this._parsedAid) {
+									_context7.next = 7;
+									break;
+								}
+
+								err = new Error('Cannot process ISO 14443-4 tag because AID was not set.');
+
+								this.emit('error', err);
+
+								return _context7.abrupt('return');
+
+							case 7:
+
+								// APDU CMD: Select Apdu
+								packetHeader = Buffer.from([0x00, // Class
+								0xa4, // INS
+								0x04, // P1
+								0x00, // P2
+								0x05 // Le
+								]);
+								aid = Buffer.from(this._parsedAid);
+								packet = Buffer.concat([packetHeader, aid]);
+								_context7.prev = 10;
+								_context7.next = 13;
+								return this.transmit(packet, 40);
+
+							case 13:
+								response = _context7.sent;
+
+								if (!(response.length === 2 && response.readUInt16BE(0) === 0x6a82)) {
+									_context7.next = 18;
+									break;
+								}
+
+								_err = new Error('Not found response. Tag not compatible with AID ' + this._aid + '.');
+
+								this.emit('error', _err);
+
+								return _context7.abrupt('return');
+
+							case 18:
+								if (!(response.length < 2)) {
+									_context7.next = 22;
+									break;
+								}
+
+								_err2 = new Error('Invalid response length ' + response.length + '. Expected minimal length was 2 bytes.');
+
+								this.emit('error', _err2);
+
+								return _context7.abrupt('return');
+
+							case 22:
+
+								// another possibility const statusCode = parseInt(response.slice(-2).toString('hex'), 16)
+								statusCode = response.slice(-2).readUInt16BE(0);
+
+								// an error occurred
+
+								if (!(statusCode !== 0x9000)) {
+									_context7.next = 27;
+									break;
+								}
+
+								_err3 = new Error('Response status error.');
+
+								this.emit('error', _err3);
+
+								return _context7.abrupt('return');
+
+							case 27:
+
+								// strip out the status code
+								data = response.slice(0, -2);
+
+
+								this.logger.info('Data cropped', data);
+
+								this.emit('card', _extends({}, this.card, {
+									data: data
+								}));
+
+								_context7.next = 36;
+								break;
+
+							case 32:
+								_context7.prev = 32;
+								_context7.t0 = _context7['catch'](10);
+								error = new _errors.GetUIDError(null, null, _context7.t0);
+
+
+								this.emit('error', error);
+
+							case 36:
+							case 'end':
+								return _context7.stop();
+						}
+					}
+				}, _callee7, this, [[10, 32]]);
+			}));
+
+			function handle_Iso_14443_4_Tag() {
+				return _ref7.apply(this, arguments);
 			}
 
-			// APDU CMD: Select Apdu
-			const packetHeader = Buffer.from([0x00, // Class
-			0xa4, // INS
-			0x04, // P1
-			0x00, // P2
-			0x05 // Le
-			]);
+			return handle_Iso_14443_4_Tag;
+		}()
+	}, {
+		key: 'close',
+		value: function close() {
 
-			const aid = Buffer.from(_this7._parsedAid);
+			this.reader.close();
+		}
+	}]);
 
-			const packet = Buffer.concat([packetHeader, aid]);
-
-			try {
-
-				const response = yield _this7.transmit(packet, 40);
-
-				if (response.length === 2 && response.readUInt16BE(0) === 0x6a82) {
-
-					const err = new Error(`Not found response. Tag not compatible with AID ${_this7._aid}.`);
-					_this7.emit('error', err);
-
-					return;
-				}
-
-				if (response.length < 2) {
-
-					const err = new Error(`Invalid response length ${response.length}. Expected minimal length was 2 bytes.`);
-					_this7.emit('error', err);
-
-					return;
-				}
-
-				// another possibility const statusCode = parseInt(response.slice(-2).toString('hex'), 16)
-				const statusCode = response.slice(-2).readUInt16BE(0);
-
-				// an error occurred
-				if (statusCode !== 0x9000) {
-
-					const err = new Error(`Response status error.`);
-					_this7.emit('error', err);
-
-					return;
-				}
-
-				// strip out the status code
-				const data = response.slice(0, -2);
-
-				_this7.logger.info('Data cropped', data);
-
-				_this7.emit('card', _extends({}, _this7.card, {
-					data: data
-				}));
-			} catch (err) {
-
-				const error = new _errors.GetUIDError(null, null, err);
-
-				_this7.emit('error', error);
-			}
-		})();
-	}
-
-	close() {
-
-		this.reader.close();
-	}
-
-}
+	return Reader;
+}(_events2.default);
 
 exports.default = Reader;
