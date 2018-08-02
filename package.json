@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "babel-preset-es2015": "^6.24.1",
-    "pcsclite": "git://github.com/philoliver/node-pcsclite.git#master"
+    "@pokusew/pcsclite": "git://github.com/philoliver/node-pcsclite.git#master"
   },
   "devDependencies": {
     "ava": "^0.25.0",
