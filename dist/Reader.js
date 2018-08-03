@@ -495,13 +495,31 @@ var Reader = function (_EventEmitter) {
 								// key is not in the storage
 
 								if (keyNumber) {
-									_context3.next = 25;
+									_context3.next = 15;
 									break;
 								}
 
+								// If there isn't already an authentication process happening for this key, start it
 								if (!this.pendingLoadAuthenticationKey[key]) {
-									_context3.next = 14;
-									break;
+
+									// set key number to first
+									keyNumber = Object.keys(this.keyStorage)[0];
+
+									// if this number is not free
+									if (this.keyStorage[keyNumber] !== null) {
+										// try to find any free number
+										freeNumber = Object.keys(this.keyStorage).find(function (n) {
+											return _this7.keyStorage[n] === null;
+										});
+										// if we find, we use it, otherwise the first will be used and rewritten
+
+										if (freeNumber) {
+											keyNumber = freeNumber;
+										}
+									}
+
+									// Store the authentication promise in case other blocks are in process of authentication
+									this.pendingLoadAuthenticationKey[key] = this.loadAuthenticationKey(parseInt(keyNumber), key);
 								}
 
 								_context3.prev = 3;
@@ -519,43 +537,14 @@ var Reader = function (_EventEmitter) {
 								throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', _context3.t0);
 
 							case 12:
-								_context3.next = 25;
-								break;
+								_context3.prev = 12;
 
-							case 14:
+								// remove the loadAuthenticationKey Promise from pendingLoadAuthenticationKey
+								// as it is already resolved or rejected at this point
+								delete this.pendingLoadAuthenticationKey[key];
+								return _context3.finish(12);
 
-								// set key number to first
-								keyNumber = Object.keys(this.keyStorage)[0];
-
-								// if this number is not free
-								if (this.keyStorage[keyNumber] !== null) {
-									// try to find any free number
-									freeNumber = Object.keys(this.keyStorage).find(function (n) {
-										return _this7.keyStorage[n] === null;
-									});
-									// if we find, we use it, otherwise the first will be used and rewritten
-
-									if (freeNumber) {
-										keyNumber = freeNumber;
-									}
-								}
-
-								_context3.prev = 16;
-
-								this.pendingLoadAuthenticationKey[key] = this.loadAuthenticationKey(parseInt(keyNumber), key);
-								_context3.next = 20;
-								return this.pendingLoadAuthenticationKey[key];
-
-							case 20:
-								_context3.next = 25;
-								break;
-
-							case 22:
-								_context3.prev = 22;
-								_context3.t1 = _context3['catch'](16);
-								throw new _errors.AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', _context3.t1);
-
-							case 25:
+							case 15:
 								packet = !obsolete ?
 								// CMD: Authentication
 								new Buffer([0xff, // Class
@@ -578,44 +567,44 @@ var Reader = function (_EventEmitter) {
 								keyNumber // Data In: Key Number
 								]);
 								response = null;
-								_context3.prev = 27;
-								_context3.next = 30;
+								_context3.prev = 17;
+								_context3.next = 20;
 								return this.transmit(packet, 2);
 
-							case 30:
+							case 20:
 								response = _context3.sent;
 
 
 								this.logger.info('response received', response);
 
-								_context3.next = 37;
+								_context3.next = 27;
 								break;
 
-							case 34:
-								_context3.prev = 34;
-								_context3.t2 = _context3['catch'](27);
-								throw new _errors.AuthenticationError(null, null, _context3.t2);
+							case 24:
+								_context3.prev = 24;
+								_context3.t1 = _context3['catch'](17);
+								throw new _errors.AuthenticationError(null, null, _context3.t1);
 
-							case 37:
+							case 27:
 								statusCode = response.readUInt16BE(0);
 
 								if (!(statusCode !== 0x9000)) {
-									_context3.next = 41;
+									_context3.next = 31;
 									break;
 								}
 
 								this.logger.error('[authentication operation failed][request packet]', packet);
 								throw new _errors.AuthenticationError(_errors.OPERATION_FAILED, 'Authentication operation failed: Status code: 0x' + statusCode.toString(16));
 
-							case 41:
+							case 31:
 								return _context3.abrupt('return', true);
 
-							case 42:
+							case 32:
 							case 'end':
 								return _context3.stop();
 						}
 					}
-				}, _callee3, this, [[3, 9], [16, 22], [27, 34]]);
+				}, _callee3, this, [[3, 9, 12, 15], [17, 24]]);
 			}));
 
 			function authenticate(_x5, _x6, _x7) {
