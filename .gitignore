@@ -1,6 +1,5 @@
 # node, npm
 node_modules/
-dist/
 
 # Windows
 Thumbs.db
