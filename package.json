@@ -20,17 +20,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pokusew/nfc-pcsc.git"
+    "url": "https://github.com/philoliver/nfc-pcsc.git"
   },
   "license": "MIT",
   "author": {
     "name": "Martin Endler",
     "url": "https://github.com/pokusew"
   },
-  "contributors": [{
-    "name": "foxxyz",
-    "url": "https://github.com/foxxyz"
-  }],
+  "contributors": [
+    {
+      "name": "foxxyz",
+      "url": "https://github.com/foxxyz"
+    }
+  ],
   "main": "dist/index.js",
   "scripts": {
     "build": "babel src --out-dir dist",
