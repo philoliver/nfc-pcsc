@@ -50,6 +50,7 @@
     "test": "cross-env NODE_ENV=test ava test --verbose"
   },
   "dependencies": {
+    "@babel/preset-env": "^7.4.2",
     "@pokusew/pcsclite": "0.5.2"
   },
   "devDependencies": {
