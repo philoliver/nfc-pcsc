@@ -14,12 +14,12 @@ import {
 	CARD_NOT_CONNECTED,
 	OPERATION_FAILED,
 	UNKNOWN_ERROR,
-	FAILURE
+	FAILURE,
 } from './errors';
 
 
-export const TAG_ISO_14443_3 = 'TAG_ISO_14443_3';
-export const TAG_ISO_14443_4 = 'TAG_ISO_14443_4';
+export const TAG_ISO_14443_3 = 'TAG_ISO_14443_3'; // ISO/IEC 14443-3 tags
+export const TAG_ISO_14443_4 = 'TAG_ISO_14443_4'; // ISO/IEC 14443-4 tags
 
 export const KEY_TYPE_A = 0x60;
 export const KEY_TYPE_B = 0x61;
@@ -38,18 +38,24 @@ class Reader extends EventEmitter {
 
 	autoProcessing = true;
 	_aid = null;
-	_parsedAid = null;
 
 	keyStorage = {
 		'0': null,
-		'1': null
+		'1': null,
 	};
 
 	pendingLoadAuthenticationKey = {};
 
+	/**
+	 * Reverses a copy of a given buffer
+	 * Does NOT mutate the given buffer, returns a reversed COPY
+	 * For mutating reverse use native .reverse() method on a buffer instance
+	 * @param src {Buffer} a Buffer instance
+	 * @returns {Buffer}
+	 */
 	static reverseBuffer(src) {
 
-		const buffer = new Buffer(src.length);
+		const buffer = Buffer.allocUnsafe(src.length);
 
 		for (let i = 0, j = src.length - 1; i <= j; ++i, --j) {
 			buffer[i] = src[j];
@@ -60,25 +66,12 @@ class Reader extends EventEmitter {
 
 	}
 
-	static parseAid(str) {
-
-		const result = [];
-
-		for (let i = 0; i < str.length; i += 2) {
-			result.push(parseInt(str.substr(i, 2), 16));
-		}
-
-		return result;
-
-	}
-
 	static selectStandardByAtr(atr) {
 
 		// TODO: better detecting card types
 		if (atr[5] && atr[5] === 0x4f) {
 			return TAG_ISO_14443_3;
-		}
-		else {
+		} else {
 			return TAG_ISO_14443_4;
 		}
 
@@ -90,12 +83,16 @@ class Reader extends EventEmitter {
 
 	set aid(value) {
 
-		this.logger.info('Setting AID to', value);
-		this._aid = value;
+		if (typeof value === 'function' || Buffer.isBuffer(value)) {
+			this._aid = value;
+			return;
+		}
 
-		const parsedAid = Reader.parseAid(value);
-		this.logger.info('AID parsed', parsedAid);
-		this._parsedAid = parsedAid;
+		if (typeof value !== 'string') {
+			throw new Error(`AID must be a HEX string or an instance of Buffer or a function.`);
+		}
+
+		this._aid = Buffer.from(value, 'hex');
 
 	}
 
@@ -111,19 +108,13 @@ class Reader extends EventEmitter {
 
 		if (logger) {
 			this.logger = logger;
-		}
-		else {
+		} else {
 			this.logger = {
-				log: function () {
-				},
-				debug: function () {
-				},
-				info: function () {
-				},
-				warn: function () {
-				},
-				error: function () {
-				}
+				log: function () {},
+				debug: function () {},
+				info: function () {},
+				warn: function () {},
+				error: function () {},
 			};
 		}
 
@@ -148,10 +139,12 @@ class Reader extends EventEmitter {
 
 				if ((changes & this.reader.SCARD_STATE_EMPTY) && (status.state & this.reader.SCARD_STATE_EMPTY)) {
 
-					this.logger.info('card removed');
+					this.logger.debug('card removed');
 
 					if (this.card) {
-						this.emit('card.off', { ...this.card });
+						this.emit('card.off', {
+							...this.card
+						});
 					}
 
 					try {
@@ -167,12 +160,11 @@ class Reader extends EventEmitter {
 
 					}
 
-				}
-				else if ((changes & this.reader.SCARD_STATE_PRESENT) && (status.state & this.reader.SCARD_STATE_PRESENT)) {
+				} else if ((changes & this.reader.SCARD_STATE_PRESENT) && (status.state & this.reader.SCARD_STATE_PRESENT)) {
 
 					const atr = status.atr;
 
-					this.logger.info('card inserted', atr);
+					this.logger.debug('card inserted', atr);
 
 					this.card = {};
 
@@ -187,7 +179,9 @@ class Reader extends EventEmitter {
 						await this.connect();
 
 						if (!this.autoProcessing) {
-							this.emit('card', this.card);
+							this.emit('card', {
+								...this.card
+							});
 							return;
 						}
 
@@ -206,7 +200,7 @@ class Reader extends EventEmitter {
 
 		this.reader.on('end', () => {
 
-			this.logger.info('reader removed');
+			this.logger.debug('reader removed');
 
 			this.emit('end');
 
@@ -225,7 +219,7 @@ class Reader extends EventEmitter {
 			throw new ConnectError('invalid_mode', 'Invalid mode')
 		}
 
-		this.logger.info('trying to connect', mode, modes[mode]);
+		this.logger.debug('trying to connect', mode, modes[mode]);
 
 		return new Promise((resolve, reject) => {
 
@@ -243,10 +237,10 @@ class Reader extends EventEmitter {
 
 				this.connection = {
 					type: modes[mode],
-					protocol: protocol
+					protocol: protocol,
 				};
 
-				this.logger.info('connected', this.connection);
+				this.logger.debug('connected', this.connection);
 
 				return resolve(this.connection);
 
@@ -262,7 +256,7 @@ class Reader extends EventEmitter {
 			throw new DisconnectError('not_connected', 'Reader in not connected. No need for disconnecting.')
 		}
 
-		this.logger.info('trying to disconnect', this.connection);
+		this.logger.debug('trying to disconnect', this.connection);
 
 		return new Promise((resolve, reject) => {
 
@@ -277,7 +271,7 @@ class Reader extends EventEmitter {
 
 				this.connection = null;
 
-				this.logger.info('disconnected');
+				this.logger.debug('disconnected');
 
 				return resolve(true);
 
@@ -295,7 +289,7 @@ class Reader extends EventEmitter {
 
 		return new Promise((resolve, reject) => {
 
-			this.logger.log('transmitting', data, responseMaxLength);
+			this.logger.debug('transmitting', data, responseMaxLength);
 
 			this.reader.transmit(data, responseMaxLength, this.connection.protocol, (err, response) => {
 
@@ -303,6 +297,8 @@ class Reader extends EventEmitter {
 					const error = new TransmitError(FAILURE, 'An error occurred while transmitting.', err);
 					return reject(error);
 				}
+
+				this.logger.debug('transmit response received', response, response && response.length);
 
 				return resolve(response);
 
@@ -320,7 +316,7 @@ class Reader extends EventEmitter {
 
 		return new Promise((resolve, reject) => {
 
-			this.logger.log('transmitting control', data, responseMaxLength);
+			this.logger.debug('transmitting control', data, responseMaxLength);
 
 			this.reader.control(data, this.reader.IOCTL_CCID_ESCAPE, responseMaxLength, (err, response) => {
 
@@ -328,6 +324,8 @@ class Reader extends EventEmitter {
 					const error = new ControlError(FAILURE, 'An error occurred while transmitting control.', err);
 					return reject(error);
 				}
+
+				this.logger.debug('control response received', response, response && response.length);
 
 				return resolve(response);
 
@@ -343,31 +341,37 @@ class Reader extends EventEmitter {
 			throw new LoadAuthenticationKeyError('invalid_key_number');
 		}
 
-		const keyData = Reader.parseAid(key);
+		if (!Buffer.isBuffer(key) && !Array.isArray(key)) {
 
-		if (keyData.length !== 6) {
-			throw new LoadAuthenticationKeyError('invalid_key');
+			if (typeof key !== 'string') {
+				throw new LoadAuthenticationKeyError(
+					'invalid_key',
+					'Key must an instance of Buffer or an array of bytes or a string.',
+				);
+			}
+
+			key = Buffer.from(key, 'hex');
+
+		}
+
+		if (key.length !== 6) {
+			throw new LoadAuthenticationKeyError('invalid_key', 'Key length must be 6 bytes.');
 		}
 
 		// CMD: Load Authentication Keys
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0x82, // INS
 			0x00, // P1: Key Structure (0x00 = Key is loaded into the reader volatile memory.)
 			keyNumber, // P2: Key Number (00h ~ 01h = Key Location. The keys will disappear once the reader is disconnected from the PC)
-			0x06, // Lc
-			// Data In: Key (6 bytes)
-			...keyData
+			key.length, // Lc: Length of the key (6)
+			...key, // Data In: Key (6 bytes)
 		]);
 
 		let response = null;
 
 		try {
-
 			response = await this.transmit(packet, 2);
-
-			this.logger.info('response received', response);
-
 		} catch (err) {
 
 			throw new LoadAuthenticationKeyError(null, null, err);
@@ -420,8 +424,7 @@ class Reader extends EventEmitter {
 				keyNumber = await this.pendingLoadAuthenticationKey[key];
 			} catch (err) {
 				throw new AuthenticationError('unable_to_load_key', 'Could not load authentication key into reader.', err);
-			}
-			finally {
+			} finally {
 				// remove the loadAuthenticationKey Promise from pendingLoadAuthenticationKey
 				// as it is already resolved or rejected at this point
 				delete this.pendingLoadAuthenticationKey[key];
@@ -431,7 +434,7 @@ class Reader extends EventEmitter {
 
 		const packet = !obsolete ? (
 			// CMD: Authentication
-			new Buffer([
+			Buffer.from([
 				0xff, // Class
 				0x86, // INS
 				0x00, // P1
@@ -446,13 +449,13 @@ class Reader extends EventEmitter {
 			])
 		) : (
 			// CMD: Authentication (obsolete)
-			new Buffer([
+			Buffer.from([
 				0xff, // Class
 				0x88, // INS
 				0x00, // P1
 				blockNumber, // P2: Block Number
 				keyType, // P3: Key Type
-				keyNumber // Data In: Key Number
+				keyNumber, // Data In: Key Number
 			])
 		);
 
@@ -461,9 +464,6 @@ class Reader extends EventEmitter {
 		try {
 
 			response = await this.transmit(packet, 2);
-
-			this.logger.info('response received', response);
-
 
 		} catch (err) {
 
@@ -482,13 +482,13 @@ class Reader extends EventEmitter {
 
 	}
 
-	async read(blockNumber, length, blockSize = 4, packetSize = 16) {
+	async read(blockNumber, length, blockSize = 4, packetSize = 16, readClass = 0xff) {
 
 		if (!this.card) {
 			throw new ReadError(CARD_NOT_CONNECTED);
 		}
 
-		this.logger.info('reading data from card', this.card);
+		this.logger.debug('reading data from card', this.card);
 
 		if (length > packetSize) {
 
@@ -504,7 +504,7 @@ class Reader extends EventEmitter {
 
 				// console.log(i, block, size);
 
-				commands.push(this.read(block, size, blockSize, packetSize));
+				commands.push(this.read(block, size, blockSize, packetSize, readClass));
 
 			}
 
@@ -517,12 +517,12 @@ class Reader extends EventEmitter {
 		}
 
 		// APDU CMD: Read Binary Blocks
-		const packet = new Buffer([
-			0xff, // Class
+		const packet = Buffer.from([
+			readClass, // Class
 			0xb0, // Ins
-			0x00, // P1
-			blockNumber, // P2: Block Number
-			length  // Le: Number of Bytes to Read (Maximum 16 bytes)
+			(blockNumber >> 8) & 0xFF, // P1
+			blockNumber & 0xFF, // P2: Block Number
+			length, // Le: Number of Bytes to Read (Maximum 16 bytes)
 		]);
 
 		let response = null;
@@ -531,12 +531,14 @@ class Reader extends EventEmitter {
 
 			response = await this.transmit(packet, length + 2);
 
-			this.logger.info('response received', response);
-
 		} catch (err) {
 
 			throw new ReadError(null, null, err);
 
+		}
+
+		if (response.length < 2) {
+			throw new ReadError(OPERATION_FAILED, `Read operation failed: Invalid response length ${response.length}. Expected minimal length is 2 bytes.`);
 		}
 
 		const statusCode = response.slice(-2).readUInt16BE(0);
@@ -547,7 +549,7 @@ class Reader extends EventEmitter {
 
 		const data = new Buffer(response.slice(0, -2));
 
-		this.logger.info('data', data);
+		this.logger.debug('data', data);
 
 		return data;
 
@@ -559,7 +561,7 @@ class Reader extends EventEmitter {
 			throw new WriteError(CARD_NOT_CONNECTED);
 		}
 
-		this.logger.info('writing data to card', this.card);
+		this.logger.debug('writing data to card', this.card);
 
 		if (data.length < blockSize || data.length % blockSize !== 0) {
 			throw new WriteError('invalid_data_length', 'Invalid data length. You can only update the entire data block(s).');
@@ -595,7 +597,7 @@ class Reader extends EventEmitter {
 		}
 
 		// APDU CMD: Update Binary Block
-		const packetHeader = new Buffer([
+		const packetHeader = Buffer.from([
 			0xff, // Class
 			0xd6, // Ins
 			0x00, // P1
@@ -611,18 +613,19 @@ class Reader extends EventEmitter {
 
 			response = await this.transmit(packet, 2);
 
-			this.logger.info('response received', response);
-
-
 		} catch (err) {
 
 			throw new WriteError(null, null, err);
 
 		}
 
-		const statusCode = response.readUInt16BE(0);
+		if (response.length < 2) {
+			throw new WriteError(OPERATION_FAILED, `Write operation failed: Invalid response length ${response.length}. Expected minimal length is 2 bytes.`);
+		}
 
-		this.logger.info("Recived status code: ", "0x"+statusCode.toString(16));
+		const statusCode = response.slice(-2).readUInt16BE(0);
+
+		this.logger.info("Recived status code: ", "0x" + statusCode.toString(16));
 		if (statusCode !== 0x9000) {
 			throw new WriteError(OPERATION_FAILED, `Write operation failed: Status code: 0x${statusCode.toString(16)}`);
 		}
@@ -637,7 +640,7 @@ class Reader extends EventEmitter {
 			return false;
 		}
 
-		this.logger.info('handling tag', this.card);
+		this.logger.debug('handling tag', this.card);
 
 		switch (this.card.standard) {
 
@@ -661,15 +664,15 @@ class Reader extends EventEmitter {
 			return false;
 		}
 
-		this.logger.info('processing ISO 14443-3 tag', this.card);
+		this.logger.debug('processing ISO 14443-3 tag', this.card);
 
 		// APDU CMD: Get Data
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0xca, // INS
 			0x00, // P1: Get current card UID
 			0x00, // P2
-			0x00  // Le: Full Length of UID
+			0x00, // Le: Full Length of UID
 		]);
 
 		try {
@@ -678,7 +681,7 @@ class Reader extends EventEmitter {
 
 			if (response.length < 2) {
 
-				const error = new GetUIDError('invalid_response', `Invalid response length ${response.length}. Expected minimal length was 2 bytes.`);
+				const error = new GetUIDError('invalid_response', `Invalid response length ${response.length}. Expected minimal length is 2 bytes.`);
 				this.emit('error', error);
 
 				return;
@@ -691,7 +694,7 @@ class Reader extends EventEmitter {
 			// an error occurred
 			if (statusCode !== 0x9000) {
 
-				const error = new GetUIDError(OPERATION_FAILED, 'Could not get card UID.',);
+				const error = new GetUIDError(OPERATION_FAILED, 'Could not get card UID.');
 				this.emit('error', error);
 
 				return;
@@ -703,7 +706,9 @@ class Reader extends EventEmitter {
 
 			this.card.uid = uid;
 
-			this.emit('card', { ...this.card });
+			this.emit('card', {
+				...this.card
+			});
 
 
 		} catch (err) {
@@ -723,28 +728,31 @@ class Reader extends EventEmitter {
 			return false;
 		}
 
-		this.logger.info('processing ISO 14443-4 tag', this.card);
+		this.logger.debug('processing ISO 14443-4 tag', this.card);
 
-		if (!this._parsedAid) {
-
-			const err = new Error('Cannot process ISO 14443-4 tag because AID was not set.');
-			this.emit('error', err);
-
+		if (!this.aid) {
+			this.emit('error', new Error('Cannot process ISO 14443-4 tag because AID was not set.'));
 			return;
 		}
 
-		// APDU CMD: Select Apdu
-		const packetHeader = Buffer.from([
+		const aid = typeof this.aid === 'function' ? this.aid(this.card) : this.aid;
+
+		if (!Buffer.isBuffer(aid)) {
+			this.emit('error', new Error('AID must be an instance of Buffer.'));
+			return;
+		}
+
+		// APDU CMD: SELECT FILE
+		// see http://cardwerk.com/smart-card-standard-iso7816-4-section-6-basic-interindustry-commands/#chap6_11_3
+		const packet = Buffer.from([
 			0x00, // Class
 			0xa4, // INS
 			0x04, // P1
 			0x00, // P2
-			0x05  // Le
+			aid.length, // Lc
+			...aid, // AID
+			0x00, // Le
 		]);
-
-		const aid = Buffer.from(this._parsedAid);
-
-		const packet = Buffer.concat([packetHeader, aid]);
 
 		try {
 
@@ -752,7 +760,7 @@ class Reader extends EventEmitter {
 
 			if (response.length === 2 && response.readUInt16BE(0) === 0x6a82) {
 
-				const err = new Error(`Not found response. Tag not compatible with AID ${this._aid}.`);
+				const err = new Error(`Not found response. Tag not compatible with AID ${aid.toString('hex').toUpperCase()}.`);
 				this.emit('error', err);
 
 				return;
@@ -760,7 +768,7 @@ class Reader extends EventEmitter {
 
 			if (response.length < 2) {
 
-				const err = new Error(`Invalid response length ${response.length}. Expected minimal length was 2 bytes.`);
+				const err = new Error(`Invalid response length ${response.length}. Expected minimal length is 2 bytes.`);
 				this.emit('error', err);
 
 				return;
@@ -781,11 +789,11 @@ class Reader extends EventEmitter {
 			// strip out the status code
 			const data = response.slice(0, -2);
 
-			this.logger.info('Data cropped', data);
+			this.logger.debug('Data cropped', data);
 
 			this.emit('card', {
 				...this.card,
-				data: data
+				data: data,
 			});
 
 		} catch (err) {
@@ -799,9 +807,11 @@ class Reader extends EventEmitter {
 	}
 
 	close() {
-
 		this.reader.close();
+	}
 
+	toString() {
+		return this.name;
 	}
 
 }

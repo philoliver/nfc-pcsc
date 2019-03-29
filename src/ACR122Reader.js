@@ -14,7 +14,7 @@ import {
 	CARD_NOT_CONNECTED,
 	OPERATION_FAILED,
 	UNKNOWN_ERROR,
-	FAILURE
+	FAILURE,
 } from './errors';
 
 
@@ -27,17 +27,17 @@ class ACR122Reader extends Reader {
 			0x60,
 			0xFF, // PollNr (0xFF = Endless polling)
 			0x01, // Period (0x01 – 0x0F) indicates the polling period in units of 150 ms
-			0x00 // Type 1 0x00 = Generic passive 106 kbps (ISO/IEC14443-4A, Mifare and DEP)
+			0x00, // Type 1 0x00 = Generic passive 106 kbps (ISO/IEC14443-4A, Mifare and DEP)
 		];
 
 		// CMD: Direct Transmit (to inner PN532 chip InAutoPoll CMD)
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0x00, // INS
 			0x00, // P1
 			0x00, // P2
 			payload.length, // Lc: Number of Bytes to send (Maximum 255 bytes)
-			...payload
+			...payload,
 		]);
 
 		console.log(packet);
@@ -48,7 +48,7 @@ class ACR122Reader extends Reader {
 
 			response = await this.control(packet, 2);
 
-			this.logger.info('response received', response);
+			this.logger.debug('response received', response);
 
 			// Red OFF Green OFF  0x00
 			// Red ON  Green OFF  0x01
@@ -86,8 +86,8 @@ class ACR122Reader extends Reader {
 		 |   3 | Green LED State Mask             | 1 = Update the State; 0 = No change |
 		 |   4 | Initial Red LED Blinking State   | 1 = On; 0 = Off                     |
 		 |   5 | Initial Green LED Blinking State | 1 = On; 0 = Off                     |
-		 |   6 | Red LED Blinking Mask            | 1 = Blink ; 0 = Not Blink            |
-		 |   7 | Green LED Blinking Mask          | 1 = Blink ; 0 = Not Blink            |
+		 |   6 | Red LED Blinking Mask            | 1 = Blink; 0 = Not Blink            |
+		 |   7 | Green LED Blinking Mask          | 1 = Blink; 0 = Not Blink            |
 		 +-----+----------------------------------+-------------------------------------+
 		 */
 
@@ -113,7 +113,7 @@ class ACR122Reader extends Reader {
 
 
 		// CMD: Bi-Color LED and Buzzer Control
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0x00, // INS
 			0x40, // P1
@@ -130,7 +130,7 @@ class ACR122Reader extends Reader {
 
 			response = await this.control(packet, 2);
 
-			this.logger.info('response received', response);
+			this.logger.debug('response received', response);
 
 			// Red OFF Green OFF  0x00
 			// Red ON  Green OFF  0x01
@@ -158,7 +158,7 @@ class ACR122Reader extends Reader {
 
 
 		// CMD: Set Buzzer Output Enable for Card Detection
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0x00, // INS
 			0x52, // P1
@@ -174,7 +174,7 @@ class ACR122Reader extends Reader {
 
 			response = await this.control(packet, 2);
 
-			this.logger.info('response received', response);
+			this.logger.debug('response received', response);
 
 
 		} catch (err) {
@@ -197,7 +197,7 @@ class ACR122Reader extends Reader {
 		// const picc = 0b01000000;
 
 		// CMD: Set PICC Operating Parameter
-		const packet = new Buffer([
+		const packet = Buffer.from([
 			0xff, // Class
 			0x00, // INS
 			0x51, // P1
@@ -213,7 +213,7 @@ class ACR122Reader extends Reader {
 
 			response = await this.control(packet, 1);
 
-			this.logger.info('response received', response);
+			this.logger.debug('response received', response);
 
 
 		} catch (err) {

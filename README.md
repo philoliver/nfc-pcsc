@@ -1,6 +1,8 @@
 # nfc-pcsc
 
-A simple wrapper around [philoliver/node-pcsclite](https://github.com/philoliver/node-pcsclite) to work easier with NFC tags.
+[![npm](https://img.shields.io/npm/v/nfc-pcsc.svg)](https://www.npmjs.com/package/nfc-pcsc)
+[![build status](https://img.shields.io/travis/pokusew/nfc-pcsc/master.svg)](https://travis-ci.org/pokusew/nfc-pcsc)
+[![nfc-pcsc channel on discord](https://img.shields.io/badge/discord-join%20chat-61dafb.svg)](https://discord.gg/bg3yazg)
 
 Easy **reading and writing NFC tags and cards** in Node.js
 
@@ -10,7 +12,7 @@ Built-in support for auto-reading **card UIDs** and reading tags emulated with [
 It is tested to work with **ACR122 USB reader** but it should work with **all PC/SC compliant devices**.  
 When detecting tags does not work see [Alternative usage](#alternative-usage).
 
-This library uses pscslite native bindings [pokusew/node-pcsclite](https://github.com/pokusew/node-pcsclite) under the hood.
+This library uses pcsclite native bindings [pokusew/node-pcsclite](https://github.com/pokusew/node-pcsclite) under the hood.
 
 **Psst!** Problems upgrading to 0.6.0? Check out [this migration note](#migration-from-older-versions-to-060).
 
@@ -35,12 +37,14 @@ This library uses pscslite native bindings [pokusew/node-pcsclite](https://githu
   - [Can I use this library in my Electron app?](#can-i-use-this-library-in-my-electron-app)
   - [Can I use this library in my angular-electron app?](#can-i-use-this-library-in-my-angular-electron-app)
   - [Do I have to use Babel in my app too?](#do-i-have-to-use-babel-in-my-app-too)
+  - [Which Node.js versions are supported?](#which-nodejs-versions-are-supported)
   - [How do I require/import this library?](#how-do-i-requireimport-this-library)
   - [Can I read a NDEF formatted tag?](#can-i-read-a-ndef-formatted-tag)
 - [Frequent errors](#frequent-errors)
   - [TypeError: NFC is not a constructor](#typeerror-nfc-is-not-a-constructor)
   - [Transaction failed error when using `CONNECT_MODE_DIRECT`](#transaction-failed-error-when-using-connect_mode_direct)
-  - [Mifare Classic: Authentication Error after Multiple Writes](#mifare-classic-authentication-error-after-multiple-writes)
+  - [MIFARE Classic: Authentication Error after Multiple Writes](#mifare-classic-authentication-error-after-multiple-writes)
+  - [Reading data from a type 4 tags inside a Elsys.se sensors](#reading-data-from-a-type-4-tags-inside-a-elsysse-sensors)
 - [License](#license)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -48,7 +52,7 @@ This library uses pscslite native bindings [pokusew/node-pcsclite](https://githu
 
 ## Installation
 
-> **Requirements:** **Node.js 7+** (it might work under 6.x but it is not tested)
+> **Requirements:** **Node.js 8+** (see [this FAQ](#which-nodejs-versions-are-supported) for more info)
 
 > **Note:** This library uses system PC/SC API. On **Windows and macOS** it works out of the box, but on Linux you have to do some steps as described [here](https://github.com/pokusew/node-pcsclite#installation)
 
@@ -77,7 +81,7 @@ When a NFC tag (card) is attached to the reader, the following is done:
 	
 	- when `autoProcessing` is true (default value) it will handle card by the standard:  
 		
-		`TAG_ISO_14443_3` *(Mifare Ultralight, 1K ...)*: sends GET_DATA command to retrieve **card UID**  
+		`TAG_ISO_14443_3` *(MIFARE Ultralight, 1K ...)*: sends GET_DATA command to retrieve **card UID**  
 		`TAG_ISO_14443_4` *(e.g.: Andorid HCE)*: sends SELECT_APDU command to retrive data by file
 		
 		**then `card` event is fired, for which you can listen and then you can read or write data on the card**  
@@ -94,13 +98,16 @@ When a NFC tag (card) is attached to the reader, the following is done:
 
 > ### Running examples locally
 > If you want see it in action, clone this repository, install dependencies with npm and run `npm run example`.
+> Of course, instead of npm you can Yarn if you want.
+> See scripts section of [package.json](/package.json) for all available examples run commands.
 > ```bash
 > git clone https://github.com/pokusew/nfc-pcsc.git
+> cd nfc-pcsc
 > npm install
 > npm run example
 > ```
 
-You can use this library in any Node.js 7+ environment (even in an Electron app). 
+You can use this library in any Node.js 8+ environment (even in an Electron app). 
 
 ```javascript
 // in ES6
@@ -115,15 +122,16 @@ nfc.on('reader', reader => {
 
 	console.log(`${reader.reader.name}  device attached`);
 
-	// needed for reading tags emulated with Android HCE
-	// custom AID, change according to your Android for tag emulation
-	// see https://developer.android.com/guide/topics/connectivity/nfc/hce.html
-	reader.aid = 'F222222222';
+	// enable when you want to auto-process ISO 14443-4 tags (standard=TAG_ISO_14443_4)
+	// when an ISO 14443-4 is detected, SELECT FILE command with the AID is issued
+	// the response is available as card.data in the card event
+	// see examples/basic.js line 17 for more info
+	// reader.aid = 'F222222222';
 
 	reader.on('card', card => {
 
 		// card is object containing following data
-		// [always] String type: TAG_ISO_14443_3 (standard nfc tags like Mifare) or TAG_ISO_14443_4 (Android HCE and others)
+		// [always] String type: TAG_ISO_14443_3 (standard nfc tags like MIFARE) or TAG_ISO_14443_4 (Android HCE and others)
 		// [always] String standard: same as type
 		// [only TAG_ISO_14443_3] String uid: tag uid
 		// [only TAG_ISO_14443_4] Buffer data: raw data from select APDU response
@@ -173,15 +181,10 @@ nfc.on('reader', reader => {
 
 	console.log(`${reader.reader.name}  device attached`);
 
-	// needed for reading tags emulated with Android HCE
-	// custom AID, change according to your Android for tag emulation
-	// see https://developer.android.com/guide/topics/connectivity/nfc/hce.html
-	// reader.aid = 'F222222222';
-
 	reader.on('card', card => {
 
 		// card is object containing following data
-		// String standard: TAG_ISO_14443_3 (standard nfc tags like Mifare) or TAG_ISO_14443_4 (Android HCE and others)
+		// String standard: TAG_ISO_14443_3 (standard nfc tags like MIFARE Ultralight) or TAG_ISO_14443_4 (Android HCE and others)
 		// String type: same as standard
 		// Buffer atr
 
@@ -214,11 +217,11 @@ nfc.on('error', err => {
 
 ## Reading and writing data
 
-You can read from and write to numerous NFC tags including Mifare Ultralight (tested), Mifare Classic, Mifare DESFire, ...
+You can read from and write to numerous NFC tags including MIFARE Ultralight (tested), MIFARE Classic, MIFARE DESFire, ...
 
 > Actually, you can even read/write any possible non-standard NFC tag and card, via sending APDU commands according card's technical documentation via `reader.transmit`.
 
-Here is **a simple example** showing reading and writing data to simple card **without authenticating** (e.g. Mifare Ultralight):  
+Here is **a simple example** showing reading and writing data to simple card **without authenticating** (e.g. MIFARE Ultralight):  
 _See [Basic usage](#basic-usage) how to set up reader or [look here for full code](/examples/from-readme-3.js)_
 
 ```javascript
@@ -262,10 +265,13 @@ reader.on('card', async card => {
 
 📦📦📦 You can find more examples in [examples folder](/examples), including:
 
-* [index.js](/examples/index.js) – detecting, authenticating, reading and writing cards (including instructions for Mifare Classic)
-* [led.js](/examples/led.js) – controlling LED and buzzer of ACR122U look
-* [desfire.js](/examples/desfire.js) – accessing and authenticating Mifare DESFire cards
-* [uid-logger.js](/examples/uid-logger.js)
+* [read-write.js](/examples/read-write.js) – detecting, reading and writing cards standard ISO/IEC 14443-3 cards (NTAG, MIFARE Ultralight, ...)
+* [mifare-classic.js](/examples/mifare-classic.js) – authenticating, reading and writing MIFARE Classic cards
+* [mifare-desfire.js](/examples/mifare-desfire.js) – authenticating and accessing data on MIFARE DESFire cards
+* [mifare-ultralight-ntag.js](/examples/mifare-ultralight-ntag.js) – an example implementation of Mifare Ultralight EV1 and NTAG specific commands
+* [basic.js](/examples/basic.js) – reader events explanation
+* [led.js](/examples/led.js) – controlling LED and buzzer of ACR122U reader
+* [uid-logger.js](/examples/uid-logger.js) – logs uid when a card is detected
 
 Feel free to open pull request, if you have any useful example, that you'd like to add. 
 
@@ -303,7 +309,7 @@ For macOS and Linux build, there are plenty of services to choose from, for exam
 
 ### Do I have to use Babel in my app too?
 
-**No, you don't have to.** This library works great **in any Node.js 7+ environment** (even in an **Electron** app).
+**No, you don't have to.** This library works great **in any Node.js 8+ environment** (even in an **Electron** app).
 
 > Psst! Instead of using **async/await** (like in examples), you can use Promises.
 > ```
@@ -313,7 +319,13 @@ For macOS and Linux build, there are plenty of services to choose from, for exam
 >   .catch(err => ...))
 > ```
 
-Internally it uses Babel under the hood to transpile things, that are not supported in Node.js v7 (e.g.: import/export). The transpiled code (in the dist folder) is then published into npm and when you install and require the library, it requires the transpiled code, so you don't have to worry about anything.
+Babel is used under the hood to transpile features, that are not supported in **Node.js 8** (for example ES6 modules – import/export, see [.babelrc](/.babelrc) for list of used plugins). The transpiled code (in the dist folder) is then published into npm and when you install and require the library, the transpiled code is used, so you don't have to worry about anything.
+
+### Which Node.js versions are supported?
+
+nfc-pcsc officially supports **Node.js versions greater than or equal to 8** (i.e. Node.js **8.x, 9.x, 10.x, 11.x**).
+
+_Note: If you need to use nfc-pcsc in **Node.js 7.x**, it is also possible, but you'll have to transpile async/await using Babel (e.g. using [@babel/plugin-transform-async-to-generator](https://babeljs.io/docs/en/babel-plugin-transform-async-to-generator))._
 
 ### How do I require/import this library?
 
@@ -360,10 +372,19 @@ It was removed for non-standard behaviour of ES6 modules in ES5 env (see [#12](h
 
 No worry, just needs a proper configuration, see [explanation and instructions here](https://github.com/pokusew/nfc-pcsc/issues/13#issuecomment-302482621).
 
-### Mifare Classic: Authentication Error after Multiple Writes
+### MIFARE Classic: Authentication Error after Multiple Writes
 
 No worry, you have probably modified a sector trailer instead of a data block, see [explanation and instructions here](https://github.com/pokusew/nfc-pcsc/issues/16#issuecomment-304989178).
 
+### Reading data from a type 4 tags inside a [Elsys.se](https://www.elsys.se/en/) sensors
+
+According to [@martijnthe](https://github.com/martijnthe)'s findings, it seems to be necessary to change the CLASS of READ BINARY APDU command
+from the default value of `0xFF` to `0x00` in order to make a successful read.
+
+If you experience the same problems, you can try setting the fourth argument (readClass) of the
+[`reader.read(blockNumber, length, blockSize, packetSize, readClass)`](https://github.com/pokusew/nfc-pcsc/blob/master/src/Reader.js#L493) method to value `0x00`.
+
+Relevant conversation: https://github.com/pokusew/nfc-pcsc/pull/55#issuecomment-450120232
 
 ## License
 

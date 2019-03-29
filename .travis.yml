@@ -1,23 +1,29 @@
 # Travis CI config file
 # https://docs.travis-ci.com/
 
-dist: trusty
-sudo: false
+dist: xenial
 
 language: node_js
 
 node_js:
-  - "7"
+  - "11.*"
+  - "10.*"
+  - "9.*"
+  - "8.*"
 
 cache:
-  npm: true
+  yarn: true
+
+before_install:
+  - sudo apt-get install -y libpcsclite1 libpcsclite-dev pcscd
+  - yarn global add node-gyp
 
 install:
-  - npm install --only=dev
+  - yarn --ignore-engines # AVA is not officially supported on Node.js 9.x
 
 before_script:
-  - npm run build
+  - yarn build
 
 script:
   - node test/_node-version-test.js
-  - npm run test
+  - yarn test
