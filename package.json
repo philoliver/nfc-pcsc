@@ -27,12 +27,10 @@
     "name": "Martin Endler",
     "url": "https://github.com/pokusew"
   },
-  "contributors": [
-    {
-      "name": "foxxyz",
-      "url": "https://github.com/foxxyz"
-    }
-  ],
+  "contributors": [{
+    "name": "foxxyz",
+    "url": "https://github.com/foxxyz"
+  }],
   "main": "dist/index.js",
   "scripts": {
     "build": "babel src --out-dir dist",
@@ -46,11 +44,10 @@
     "example-ndef": "node -r @babel/register examples/ndef.js",
     "example-uid-logger": "node -r @babel/register examples/uid-logger.js",
     "example-without-auto": "node -r @babel/register examples/without-auto.js",
-    "prepack": "yarn build && yarn test",
+    "prepack": "yarn install && yarn build && yarn test",
     "test": "cross-env NODE_ENV=test ava test --verbose"
   },
   "dependencies": {
-    "@babel/preset-env": "^7.4.2",
     "@pokusew/pcsclite": "0.5.2"
   },
   "devDependencies": {

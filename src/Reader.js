@@ -510,8 +510,8 @@ class Reader extends EventEmitter {
 
 			return Promise.all(commands)
 				.then(values => {
-					// console.log(values);
-					return Buffer.concat(values, length);
+					let bufferValues = values.map(value => new Buffer(value));
+					return Buffer.concat(bufferValues, length);
 				});
 
 		}
